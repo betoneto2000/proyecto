@@ -1,68 +1,52 @@
+// Importamos módulos
 require('dotenv').config();
 
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
-console.log("[BOOT] Iniciando server.js");
-
 const app = express();
 
-// CORS abierto (en Render no uses origin fijo)
-app.use(cors());
+var corsOptions = {
+  origin: "http://localhost:3001"
+};
 
+
+
+//BASE http://localhost:3001/api/
+
+
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
-// Logs globales de errores (para ver por qué se cae)
-process.on('unhandledRejection', (r) => {
-  console.error('[BOOT] unhandledRejection:', r);
-});
-process.on('uncaughtException', (e) => {
-  console.error('[BOOT] uncaughtException:', e);
-});
+// BD (Sequelize)
+const db = require("./app/models");
 
-// (1) Prueba SIN DB primero: comenta temporalmente el bloque de Sequelize
-let db;
-try {
-  console.log("[BOOT] Requiriendo modelos...");
-  db = require("./app/models");
-  console.log("[BOOT] Modelos requeridos OK");
-} catch (e) {
-  console.error("[BOOT] Error al requerir ./app/models:", e);
-}
-
-// *** COMENTAR TEMPORALMENTE ESTE BLOQUE PARA PROBAR SI ARRANCA SIN BD ***
-// if (db?.sequelize) {
-//   console.log("[BOOT] Autenticando BD...");
-//   db.sequelize.authenticate()
-//     .then(() => {
-//       console.log("[BOOT] Conectado a la base de datos.");
-//       return db.sequelize.sync();
-//     })
-//     .then(() => console.log("[BOOT] Modelos sincronizados."))
-//     .catch((err) => console.error("[BOOT] Error de BD:", err));
-// }
+// Conexión y sincronización (tal como en tu chasis)
+db.sequelize
+  .authenticate()
+  .then(() => {
+    console.log("Conectado a la base de datos.");
+    return db.sequelize.sync(); // crea tablas si no existen
+  })
+  .then(() => console.log("Modelos sincronizados."))
+  .catch((err) => console.error("Error de BD:", err));
 
 // Ruta simple
 app.get("/", (req, res) => {
-  res.json({ ok: true, message: "API Boletos", time: new Date().toISOString() });
+  res.json({ message: "Sistema de Venta de Boletos - API" });
 });
 
 // Rutas
-try {
-  require("./app/routes/usuario.routes.js")(app);
-  require("./app/routes/partido.routes.js")(app);
-  require("./app/routes/localidad.routes.js")(app);
-  require("./app/routes/inventario.routes.js")(app);
-  require("./app/routes/venta.routes.js")(app);
-  console.log("[BOOT] Rutas registradas");
-} catch (e) {
-  console.error("[BOOT] Error registrando rutas:", e);
-}
+require("./app/routes/usuario.routes.js")(app);
+require("./app/routes/partido.routes.js")(app);
+require("./app/routes/localidad.routes.js")(app);
+require("./app/routes/inventario.routes.js")(app);
+require("./app/routes/venta.routes.js")(app);
 
-// Escuchar SIEMPRE el puerto de Render
+// Puerto
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[BOOT] Server is running on port ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}.`);
 });
